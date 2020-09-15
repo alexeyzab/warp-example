@@ -6,7 +6,7 @@ mod handler;
 use std::convert::Infallible;
 
 use sqlx::PgPool;
-use warp::{Filter};
+use warp::Filter;
 
 #[tokio::main]
 async fn main() {
@@ -23,8 +23,8 @@ async fn main() {
         .and_then(handler::health_handler);
 
     let routes = health_route
-      .with(warp::cors().allow_any_origin())
-      .recover(error::handle_rejection);
+        .with(warp::cors().allow_any_origin())
+        .recover(error::handle_rejection);
 
     warp::serve(routes).run(([127, 0, 0, 1], 8000)).await;
 }

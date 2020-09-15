@@ -1,9 +1,12 @@
+use crate::data::*;
 use crate::error;
 
 use sqlx::PgPool;
 use std::env;
 use std::fs;
 use std::time::Duration;
+
+use warp;
 
 const DB_POOL_MAX_OPEN: u32 = 32;
 const DB_POOL_MAX_IDLE: u64 = 8;
@@ -32,4 +35,22 @@ pub async fn init_db(db_pool: &PgPool) -> Result<(), error::Error> {
         .map_err(error::Error::DBInitError)?;
 
     Ok(())
+}
+
+pub async fn create_todo(db_pool: &PgPool, body: TodoRequest) -> error::Result<Todo> {
+    let row = sqlx::query_as!(
+        Todo,
+        "
+      INSERT INTO todo ( name )
+      VALUES ( $1 ) RETURNING *
+      ",
+        &body.name
+    )
+    .fetch_one(db_pool)
+    .await;
+    let data = match row {
+        Ok(result) => Ok(result),
+        Err(e) => Err(warp::reject::custom(error::SqlxError { error: e })),
+    };
+    data
 }

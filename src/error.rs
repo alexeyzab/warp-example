@@ -1,12 +1,19 @@
 use std::convert::Infallible;
 
 use serde::Serialize;
+use sqlx;
 use thiserror::Error;
 use warp::{http::StatusCode, Rejection, Reply};
 
-type Result<T> = std::result::Result<T, Rejection>;
+pub type Result<T> = std::result::Result<T, Rejection>;
+
+#[derive(Debug)]
+pub struct SqlxError {
+    pub error: sqlx::error::Error,
+}
 
 impl warp::reject::Reject for Error {}
+impl warp::reject::Reject for SqlxError {}
 
 #[derive(Serialize)]
 struct ErrorResponse {
