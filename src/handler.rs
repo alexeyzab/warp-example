@@ -1,8 +1,14 @@
 use crate::data::*;
 use crate::db;
 use crate::error;
+use serde_derive::Deserialize;
 use sqlx::PgPool;
 use warp::{http::StatusCode, reject, Rejection, Reply};
+
+#[derive(Deserialize)]
+pub struct SearchQuery {
+    search: Option<String>,
+}
 
 pub async fn health_handler(db_pool: PgPool) -> std::result::Result<impl Reply, Rejection> {
     sqlx::query("SELECT 1")
@@ -17,4 +23,26 @@ pub async fn create_todo_handler(body: TodoRequest, db_pool: PgPool) -> error::R
     Ok(warp::reply::json(&TodoResponse::of(
         db::create_todo(&db_pool, body).await?,
     )))
+}
+
+pub async fn list_todos_handler(query: SearchQuery, db_pool: PgPool) -> error::Result<impl Reply> {
+    let todos = db::fetch_todos(&db_pool, query.search).await?;
+    Ok(warp::reply::json::<Vec<_>>(
+        &todos.into_iter().map(TodoResponse::of).collect(),
+    ))
+}
+
+pub async fn update_todo_handler(
+    id: i32,
+    body: TodoUpdateRequest,
+    db_pool: PgPool,
+) -> error::Result<impl Reply> {
+    Ok(warp::reply::json(&TodoResponse::of(
+        db::update_todo(&db_pool, id, body).await?,
+    )))
+}
+
+pub async fn delete_todo_handler(id: i32, db_pool: PgPool) -> error::Result<impl Reply> {
+    db::delete_todo(&db_pool, id).await?;
+    Ok(StatusCode::OK)
 }

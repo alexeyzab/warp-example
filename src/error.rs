@@ -1,7 +1,6 @@
 use std::convert::Infallible;
 
 use serde::Serialize;
-use sqlx;
 use thiserror::Error;
 use warp::{http::StatusCode, Rejection, Reply};
 
@@ -37,7 +36,10 @@ pub async fn handle_rejection(err: Rejection) -> std::result::Result<impl Reply,
     if err.is_not_found() {
         code = StatusCode::NOT_FOUND;
         message = "Not Found";
-    } else if let Some(_) = err.find::<warp::filters::body::BodyDeserializeError>() {
+    } else if err
+        .find::<warp::filters::body::BodyDeserializeError>()
+        .is_some()
+    {
         code = StatusCode::BAD_REQUEST;
         message = "Invalid Body";
     } else if let Some(e) = err.find::<Error>() {
@@ -52,7 +54,7 @@ pub async fn handle_rejection(err: Rejection) -> std::result::Result<impl Reply,
                 message = "Internal Server Error";
             }
         }
-    } else if let Some(_) = err.find::<warp::reject::MethodNotAllowed>() {
+    } else if err.find::<warp::reject::MethodNotAllowed>().is_some() {
         code = StatusCode::METHOD_NOT_ALLOWED;
         message = "Method Not Allowed";
     } else {

@@ -6,8 +6,6 @@ use std::env;
 use std::fs;
 use std::time::Duration;
 
-use warp;
-
 const DB_POOL_MAX_OPEN: u32 = 32;
 const DB_POOL_MAX_IDLE: u64 = 8;
 const DB_POOL_TIMEOUT_SECONDS: u64 = 15;
@@ -48,9 +46,40 @@ pub async fn create_todo(db_pool: &PgPool, body: TodoRequest) -> error::Result<T
     )
     .fetch_one(db_pool)
     .await;
-    let data = match row {
-        Ok(result) => Ok(result),
-        Err(e) => Err(warp::reject::custom(error::SqlxError { error: e })),
+
+    Ok(row.map_err(|e| warp::reject::custom(error::Error::DBQueryError(e)))?)
+}
+
+pub async fn fetch_todos(db_pool: &PgPool, search: Option<String>) -> error::Result<Vec<Todo>> {
+    let q = match search {
+        Some(v) => sqlx::query_as!(Todo, "SELECT id, name, created_at, checked FROM todo WHERE name like $1 ORDER BY created_at DESC", v).fetch_all(db_pool).await,
+        None => sqlx::query_as!(Todo, "SELECT id, name, created_at, checked FROM todo ORDER BY created_at DESC").fetch_all(db_pool).await,
     };
-    data
+
+    Ok(q.map_err(|e| warp::reject::custom(error::Error::DBQueryError(e)))?)
+}
+
+pub async fn update_todo(
+    db_pool: &PgPool,
+    id: i32,
+    body: TodoUpdateRequest,
+) -> error::Result<Todo> {
+    let row = sqlx::query_as!(
+        Todo,
+        "UPDATE todo SET name = $1, checked = $2 WHERE id = $3 RETURNING *",
+        body.name,
+        body.checked,
+        id
+    )
+    .fetch_one(db_pool)
+    .await;
+
+    Ok(row.map_err(|e| warp::reject::custom(error::Error::DBQueryError(e)))?)
+}
+
+pub async fn delete_todo(db_pool: &PgPool, id: i32) -> error::Result<u64> {
+    Ok(sqlx::query!("DELETE FROM todo WHERE id = $1", id)
+        .execute(db_pool)
+        .await
+        .map_err(|e| warp::reject::custom(error::Error::DBQueryError(e)))?)
 }
