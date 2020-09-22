@@ -11,7 +11,6 @@ pub struct SqlxError {
     pub error: sqlx::error::Error,
 }
 
-impl warp::reject::Reject for Error {}
 impl warp::reject::Reject for SqlxError {}
 
 #[derive(Serialize)]
@@ -28,6 +27,8 @@ pub enum Error {
     #[error("error reading file: {0}")]
     ReadFileError(#[from] std::io::Error),
 }
+
+impl warp::reject::Reject for Error {}
 
 pub async fn handle_rejection(err: Rejection) -> std::result::Result<impl Reply, Infallible> {
     let code;

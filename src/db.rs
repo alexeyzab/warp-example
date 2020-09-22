@@ -1,5 +1,4 @@
-use crate::data::*;
-use crate::error;
+use crate::{data::*, error, error::Error::*};
 
 use sqlx::PgPool;
 use std::env;
@@ -30,7 +29,7 @@ pub async fn init_db(db_pool: &PgPool) -> Result<(), error::Error> {
     sqlx::query(&init_file)
         .execute(db_pool)
         .await
-        .map_err(error::Error::DBInitError)?;
+        .map_err(DBInitError)?;
 
     Ok(())
 }
@@ -47,7 +46,7 @@ pub async fn create_todo(db_pool: &PgPool, body: TodoRequest) -> error::Result<T
     .fetch_one(db_pool)
     .await;
 
-    Ok(row.map_err(|e| warp::reject::custom(error::Error::DBQueryError(e)))?)
+    Ok(row.map_err(|e| warp::reject::custom(DBQueryError(e)))?)
 }
 
 pub async fn fetch_todos(db_pool: &PgPool, search: Option<String>) -> error::Result<Vec<Todo>> {
@@ -56,7 +55,7 @@ pub async fn fetch_todos(db_pool: &PgPool, search: Option<String>) -> error::Res
         None => sqlx::query_as!(Todo, "SELECT id, name, created_at, checked FROM todo ORDER BY created_at DESC").fetch_all(db_pool).await,
     };
 
-    Ok(q.map_err(|e| warp::reject::custom(error::Error::DBQueryError(e)))?)
+    Ok(q.map_err(|e| warp::reject::custom(DBQueryError(e)))?)
 }
 
 pub async fn update_todo(
@@ -74,12 +73,12 @@ pub async fn update_todo(
     .fetch_one(db_pool)
     .await;
 
-    Ok(row.map_err(|e| warp::reject::custom(error::Error::DBQueryError(e)))?)
+    Ok(row.map_err(|e| warp::reject::custom(DBQueryError(e)))?)
 }
 
 pub async fn delete_todo(db_pool: &PgPool, id: i32) -> error::Result<u64> {
     Ok(sqlx::query!("DELETE FROM todo WHERE id = $1", id)
         .execute(db_pool)
         .await
-        .map_err(|e| warp::reject::custom(error::Error::DBQueryError(e)))?)
+        .map_err(|e| warp::reject::custom(DBQueryError(e)))?)
 }

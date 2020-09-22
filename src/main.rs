@@ -1,12 +1,11 @@
+use sqlx::PgPool;
+use std::convert::Infallible;
+use warp::Filter;
+
 mod data;
 mod db;
 mod error;
 mod handler;
-
-use std::convert::Infallible;
-
-use sqlx::PgPool;
-use warp::Filter;
 
 #[tokio::main]
 async fn main() {
